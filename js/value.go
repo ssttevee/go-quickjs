@@ -218,6 +218,28 @@ func (v *Value) ToFloat() float64 {
 	panic("value is not number")
 }
 
+func (v *Value) ToBool() bool {
+	defer runtime.KeepAlive(v)
+
+	switch v.value.Tag() {
+	case internal.TagBool:
+		return internal.ToBool(v.value)
+	}
+
+	panic("value is not boolean")
+}
+
+func (v *Value) IsTruthy() (bool, error) {
+	defer runtime.KeepAlive(v)
+
+	result := internal.IsTruthy(v.realm.context, v.value)
+	if result == -1 {
+		return false, v.realm.getError()
+	}
+
+	return result != 0, nil
+}
+
 func (v *Value) Get(property string) (*Value, error) {
 	defer runtime.KeepAlive(v)
 

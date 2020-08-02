@@ -56,6 +56,14 @@ func ToFloat(v Value) float64 {
 	return float64(*(*C.double)(unsafe.Pointer(&v.u)))
 }
 
+func ToBool(v Value) bool {
+	return ToInt(v) != 0
+}
+
+func IsTruthy(ctx *Context, v Value) int {
+	return int(C.JS_ToBool((*C.JSContext)(ctx), C.JSValue(v)))
+}
+
 func GetProperty(ctx *Context, thisObj Value, prop Atom) Value {
 	return Value(C.JS_GetProperty((*C.JSContext)(ctx), C.JSValue(thisObj), C.JSAtom(prop)))
 }

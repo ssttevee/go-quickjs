@@ -2,10 +2,8 @@ package js
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"runtime"
-	"runtime/debug"
 
 	"github.com/ssttevee/go-quickjs/internal"
 )
@@ -80,6 +78,14 @@ func jsToReflect(r *Realm, v *Value, t reflect.Type) (reflect.Value, error) {
 
 	case reflect.Float64:
 		return reflect.ValueOf(v.ToFloat()), nil
+
+	case reflect.Bool:
+		b, err := v.IsTruthy()
+		if err != nil {
+			return reflect.Value{}, err
+		}
+
+		return reflect.ValueOf(b), nil
 
 	case reflect.Slice:
 		if !v.IsArray() {
