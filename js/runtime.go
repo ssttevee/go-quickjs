@@ -72,7 +72,7 @@ func (rt *Runtime) allocateTimerID() int {
 	}
 }
 
-func (rt *Runtime) setTimeout(r *Realm, thisValue *Value, fn *Function, ms int, args ...*Value) (int, error) {
+func (rt *Runtime) setTimeout(r *Realm, thisValue *Value, fn *Function, ms float64, args ...*Value) (int, error) {
 	return rt.setTimer(r, fn, ms, args, func(id int) {
 		rt.mutex.Lock()
 		defer rt.mutex.Unlock()
@@ -81,7 +81,7 @@ func (rt *Runtime) setTimeout(r *Realm, thisValue *Value, fn *Function, ms int, 
 	})
 }
 
-func (rt *Runtime) setInterval(r *Realm, thisValue *Value, fn *Function, ms int, args ...*Value) (int, error) {
+func (rt *Runtime) setInterval(r *Realm, thisValue *Value, fn *Function, ms float64, args ...*Value) (int, error) {
 	return rt.setTimer(r, fn, ms, args, func(id int) {
 		rt.mutex.Lock()
 		defer rt.mutex.Unlock()
@@ -135,14 +135,14 @@ func (rt *Runtime) enqueueCall(r *Realm, fn, thisObject *Value, args []interface
 	rt.taskQueue <- makeTaskFunc(r, fn, thisObject, args)
 }
 
-func (rt *Runtime) setTimer(r *Realm, fn *Function, ms int, args []*Value, afterTask func(int)) (int, error) {
+func (rt *Runtime) setTimer(r *Realm, fn *Function, ms float64, args []*Value, afterTask func(int)) (int, error) {
 	rt.mutex.Lock()
 	defer rt.mutex.Unlock()
 
 	id := rt.allocateTimerID()
 	task := makeTaskFunc(r, (*Value)(fn), nil, args)
 
-	rt.timers[id] = time.AfterFunc(time.Duration(ms)*time.Millisecond, func() {
+	rt.timers[id] = time.AfterFunc(time.Duration(ms*float64(time.Millisecond)), func() {
 		rt.taskQueue <- func() error {
 			task()
 			afterTask(id)
