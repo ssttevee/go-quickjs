@@ -294,5 +294,5 @@ func ReadObject(ctx *Context, buf []byte, flags ReadObjectFlag) Value {
 }
 
 func EvalFunction(ctx *Context, funObj Value) Value {
-	return Value(C.JS_EvalFunction((*C.JSContext)(ctx), C.JSValue(funObj)))
+	return Value(C.JS_EvalFunction((*C.JSContext)(ctx), C.JSValue(DupValue(ctx, funObj))))
 }
