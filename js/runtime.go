@@ -144,7 +144,10 @@ func (rt *Runtime) setTimer(r *Realm, fn *Function, ms float64, args []*Value, a
 
 	rt.timers[id] = time.AfterFunc(time.Duration(ms*float64(time.Millisecond)), func() {
 		rt.taskQueue <- func() error {
-			task()
+			if err := task(); err != nil {
+				return err
+			}
+
 			afterTask(id)
 
 			return nil
