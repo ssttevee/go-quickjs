@@ -52,18 +52,10 @@ func go_object_with_finalizer_class_finalizer(runtime *C.JSRuntime, obj C.JSValu
 	lookupAndDeleteFinalizer(int(uintptr(C.JS_GetOpaque(obj, objectWithFinalizerClassID))))()
 }
 
-func defineObjectWithFinalizerClass(rt *C.JSRuntime) *C.JSRuntime {
-	className := C.CString("ObjectWithFinalizer")
-	defer C.free(unsafe.Pointer(className))
-
-	if C.JS_NewClass(rt, objectWithFinalizerClassID, &C.JSClassDef{
-		class_name: className,
-		finalizer:  (*C.JSClassFinalizer)(C.go_object_with_finalizer_class_finalizer),
-	}) != 0 {
-		panic("failed to define object with finalizer class")
-	}
-
-	return rt
+func init() {
+	registerClassDefinition(objectWithFinalizerClassID, "ObjectWithFinalizer", C.JSClassDef{
+		finalizer: (*C.JSClassFinalizer)(C.go_object_with_finalizer_class_finalizer),
+	})
 }
 
 func NewObjectWithFinalizer(ctx *Context, f func()) Value {

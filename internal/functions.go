@@ -19,19 +19,11 @@ var (
 	savedFunctions      = map[int]Function{}
 )
 
-func defineGoFunctionClass(rt *C.JSRuntime) *C.JSRuntime {
-	className := C.CString("GoFunction")
-	defer C.free(unsafe.Pointer(className))
-
-	if C.JS_NewClass(rt, goFunctionClassID, &C.JSClassDef{
-		class_name: className,
-		finalizer:  (*C.JSClassFinalizer)(C.go_function_class_finalizer),
-		call:       (*C.JSClassCall)(C.go_function_class_call),
-	}) != 0 {
-		panic("failed to define go function class")
-	}
-
-	return rt
+func init() {
+	registerClassDefinition(goFunctionClassID, "GoFunction", C.JSClassDef{
+		finalizer: (*C.JSClassFinalizer)(C.go_function_class_finalizer),
+		call:      (*C.JSClassCall)(C.go_function_class_call),
+	})
 }
 
 type Function func(ctx *Context, this Value, args []Value) Value

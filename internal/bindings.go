@@ -138,8 +138,7 @@ func DefinePropertyGetSet(ctx *Context, obj Value, atom Atom, getter, setter Val
 }
 
 func NewRuntime() *Runtime {
-	// return (*Runtime)(defineGoFunctionClass(C.JS_NewRuntime2(&gomallocfuncs, nil)))
-	return (*Runtime)(defineGoFunctionClass(C.JS_NewRuntime()))
+	return (*Runtime)(defineCustomClasses(C.JS_NewRuntime2(&gomallocfuncs, nil)))
 }
 
 func FreeRuntime(rt *Runtime) {
