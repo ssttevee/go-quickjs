@@ -24,6 +24,8 @@ type Runtime struct {
 
 	mutex  sync.Mutex
 	timers map[int]*time.Timer
+
+	threadID threadID
 }
 
 func freeRuntime(rt *Runtime) {
@@ -36,11 +38,16 @@ func NewRuntime(defaultRealmOptions ...RealmOption) *Runtime {
 		defaultRealmOptions: defaultRealmOptions,
 		timers:              map[int]*time.Timer{},
 		taskQueue:           make(chan func() error, 512),
+		threadID:            currentThreadID(),
 	}
 
 	runtime.SetFinalizer(rt, freeRuntime)
 
 	return rt
+}
+
+func (rt *Runtime) isSync() bool {
+	return rt.threadID == currentThreadID()
 }
 
 func (rt *Runtime) hasPendingTimer() bool {

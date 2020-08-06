@@ -148,7 +148,23 @@ func (v *Value) String() string {
 		}
 
 		if toStringFunc := Must(v.Get("toString")); toStringFunc.IsFunction() {
-			return Must(toStringFunc.Call(v)).ToString()
+			if v.realm.runtime.isSync() {
+				return Must(toStringFunc.Call(v)).ToString()
+			} else {
+				var val *Value
+				var err error
+
+				done := make(chan struct{})
+				v.realm.runtime.enqueueTask(func() error {
+					val, err = toStringFunc.Call(v)
+					close(done)
+
+					return nil
+				})
+
+				<-done
+				return Must(val, err).ToString()
+			}
 		}
 
 		className := Must(Must(v.Get("constructor")).Get("name")).ToString()
