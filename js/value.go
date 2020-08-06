@@ -104,31 +104,25 @@ func (v *Value) IsNumber() bool {
 	return v.IsInt() || v.IsFloat()
 }
 
-func valueInterface(ctx *internal.Context, v internal.Value) interface{} {
+func (v *Value) Interface() interface{} {
 	switch v.Tag() {
-	case internal.TagString:
-		return internal.ToString(ctx, v)
+	case TagString:
+		return v.ToString()
 
-	case internal.TagInt:
-		return internal.ToInt(v)
+	case TagInt:
+		return v.ToInt()
 
-	case internal.TagBool:
-		return internal.ToInt(v) != 0
+	case TagBool:
+		return v.ToBool()
 
-	case internal.TagNull, internal.TagUndefined:
+	case TagNull, TagUndefined:
 		return nil
 
-	case internal.TagFloat64:
-		return internal.ToFloat(v)
+	case TagFloat64:
+		return v.ToFloat()
 	}
 
 	panic("unexpected value type " + Tag(v.Tag()).String())
-}
-
-func (v *Value) Interface() interface{} {
-	defer runtime.KeepAlive(v)
-
-	return valueInterface(v.realm.context, v.value)
 }
 
 func (v *Value) String() string {
