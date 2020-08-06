@@ -53,6 +53,25 @@ func (r *Realm) Convert(v interface{}) (*Value, error) {
 
 	case bool:
 		return r.NewBoolean(v)
+
+	case map[string]interface{}:
+		obj, err := r.NewObject()
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range v {
+			converted, err := r.Convert(v)
+			if err != nil {
+				return nil, err
+			}
+
+			if _, err := obj.Set(k, converted); err != nil {
+				return nil, err
+			}
+		}
+
+		return obj, nil
 	}
 
 	if reflect.TypeOf(v).Kind() == reflect.Func {
