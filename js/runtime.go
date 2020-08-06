@@ -131,8 +131,12 @@ func makeTaskFunc(r *Realm, fn, thisObject *Value, args interface{}) func() erro
 	}
 }
 
-func (rt *Runtime) enqueueCall(r *Realm, fn, thisObject *Value, args []interface{}) {
-	rt.taskQueue <- makeTaskFunc(r, fn, thisObject, args)
+func (rt *Runtime) enqueueCall(r *Realm, fn, thisObject *Value, args interface{}) {
+	rt.enqueueTask(makeTaskFunc(r, fn, thisObject, args))
+}
+
+func (rt *Runtime) enqueueTask(f func() error) {
+	rt.taskQueue <- f
 }
 
 func (rt *Runtime) setTimer(r *Realm, fn *Function, ms float64, args []*Value, afterTask func(int)) (int, error) {
