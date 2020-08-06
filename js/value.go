@@ -131,26 +131,29 @@ func (v *Value) Interface() interface{} {
 	return valueInterface(v.realm.context, v.value)
 }
 
-func valueString(ctx *internal.Context, v internal.Value) string {
+func (v *Value) String() string {
+	defer runtime.KeepAlive(v)
+
 	switch v.Tag() {
-	case internal.TagNull:
+	case TagNull:
 		return "null"
 
-	case internal.TagUndefined:
+	case TagUndefined:
 		return "undefined"
 
-	case internal.TagObject:
-		if internal.IsArray(ctx, v) {
-			n := internal.ToInt(internal.GetPropertyStr(ctx, v, "length"))
+	case TagObject:
+		if v.IsArray() {
+			n := Must(v.Get("length")).ToInt()
+
 			elems := make([]string, n)
 			for i := 0; i < n; i++ {
-				elems[i] = valueString(ctx, internal.GetPropertyInt(ctx, v, i))
+				elems[i] = Must(v.Index(i)).String()
 			}
 
 			return "[" + strings.Join(elems, " ") + "]"
 		}
 
-		className := internal.ToString(ctx, internal.GetPropertyStr(ctx, internal.GetPropertyStr(ctx, v, "constructor"), "name"))
+		className := Must(Must(v.Get("constructor")).Get("name")).ToString()
 		if className == "" {
 			className = "Object"
 		}
@@ -158,7 +161,7 @@ func valueString(ctx *internal.Context, v internal.Value) string {
 		return "[object " + className + "]"
 	}
 
-	switch v := valueInterface(ctx, v).(type) {
+	switch v := v.Interface().(type) {
 	case string:
 		return v
 
@@ -174,12 +177,6 @@ func valueString(ctx *internal.Context, v internal.Value) string {
 	default:
 		panic(fmt.Sprintf("unexpected value type %T", v))
 	}
-}
-
-func (v *Value) String() string {
-	defer runtime.KeepAlive(v)
-
-	return valueString(v.realm.context, v.value)
 }
 
 func (v *Value) ToString() string {
