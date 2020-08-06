@@ -274,10 +274,23 @@ func (v *Value) Call(thisObject *Value, args ...interface{}) (*Value, error) {
 	return v.CallValues(thisObject, convertedArgs)
 }
 
+func (v *Value) CallValuesAsync(thisObject *Value, args []*Value) error {
+	v.realm.runtime.enqueueCall(v.realm, v, thisObject, args)
+
+	return nil
+}
+
 func (v *Value) CallAsync(thisObject *Value, args ...interface{}) error {
 	v.realm.runtime.enqueueCall(v.realm, v, thisObject, args)
 
 	return nil
+}
+
+func (v *Value) InvokeValues(name string, args []*Value) (*Value, error) {
+	defer runtime.KeepAlive(v)
+	defer runtime.KeepAlive(args)
+
+	return v.realm.createAndResolveValue(internal.InvokeStr(v.realm.context, v.value, name, internalValues(args)))
 }
 
 func (v *Value) Invoke(name string, args ...interface{}) (*Value, error) {
@@ -286,10 +299,16 @@ func (v *Value) Invoke(name string, args ...interface{}) (*Value, error) {
 		return nil, err
 	}
 
-	defer runtime.KeepAlive(v)
-	defer runtime.KeepAlive(convertedArgs)
+	return v.InvokeValues(name, convertedArgs)
+}
 
-	return v.realm.createAndResolveValue(internal.InvokeStr(v.realm.context, v.value, name, internalValues(convertedArgs)))
+func (v *Value) InvokeValuesAsync(name string, args []*Value) error {
+	funcValue, err := v.Get(name)
+	if err != nil {
+		return err
+	}
+
+	return funcValue.CallValuesAsync(v, args)
 }
 
 func (v *Value) InvokeAsync(name string, args ...interface{}) error {
