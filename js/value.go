@@ -147,6 +147,10 @@ func (v *Value) String() string {
 			return "[" + strings.Join(elems, " ") + "]"
 		}
 
+		if toStringFunc := Must(v.Get("toString")); toStringFunc.IsFunction() {
+			return Must(toStringFunc.Call(v)).ToString()
+		}
+
 		className := Must(Must(v.Get("constructor")).Get("name")).ToString()
 		if className == "" {
 			className = "Object"
