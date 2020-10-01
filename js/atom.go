@@ -16,13 +16,34 @@ func freeAtom(a *Atom) {
 	runtime.KeepAlive(a.realm)
 }
 
-func (r *Realm) NewStringAtom(s string) *Atom {
+func (r *Realm) createAtom(atom internal.Atom) *Atom {
 	a := &Atom{
 		realm: r,
-		atom:  internal.NewAtom(r.context, s),
+		atom:  atom,
 	}
 
 	runtime.SetFinalizer(a, freeAtom)
 
 	return a
+}
+
+func (r *Realm) NewStringAtom(s string) *Atom {
+	return r.createAtom(internal.NewAtom(r.context, s))
+}
+
+func (a *Atom) ToString() (string, error) {
+	value, err := a.ToStringValue()
+	if err != nil {
+		return "", err
+	}
+
+	return value.ToString(), nil
+}
+
+func (a *Atom) ToStringValue() (*Value, error) {
+	return a.realm.createAndResolveValue(internal.AtomToString(a.realm.context, a.atom))
+}
+
+func (a *Atom) ToValue() (*Value, error) {
+	return a.realm.createAndResolveValue(internal.AtomToValue(a.realm.context, a.atom))
 }

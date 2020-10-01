@@ -76,6 +76,10 @@ func (v *Value) IsString() bool {
 	return v.value.Tag() == internal.TagString
 }
 
+func (v *Value) IsSymbol() bool {
+	return v.value.Tag() == internal.TagSymbol
+}
+
 func (v *Value) IsObject() bool {
 	return v.value.Tag() == internal.TagObject
 }
@@ -235,10 +239,31 @@ func (v *Value) IsTruthy() (bool, error) {
 	return result != 0, nil
 }
 
+func (v *Value) OwnPropertyNames() []*Atom {
+	defer runtime.KeepAlive(v)
+
+	propertyNames := internal.GetOwnPropertyNames(v.realm.context, v.value, 0b11)
+	defer internal.FreePropertyEnum(v.realm.context, propertyNames)
+
+	names := make([]*Atom, len(propertyNames))
+	for i, propertyName := range propertyNames {
+		names[i] = v.realm.createAtom(propertyName.Atom())
+	}
+
+	return names
+}
+
 func (v *Value) Get(property string) (*Value, error) {
 	defer runtime.KeepAlive(v)
 
 	return v.realm.createAndResolveValue(internal.GetPropertyStr(v.realm.context, v.value, property))
+}
+
+func (v *Value) GetAtom(atom *Atom) (*Value, error) {
+	defer runtime.KeepAlive(v)
+	defer runtime.KeepAlive(atom)
+
+	return v.realm.createAndResolveValue(internal.GetProperty(v.realm.context, v.value, atom.atom))
 }
 
 func (v *Value) Index(index int) (*Value, error) {

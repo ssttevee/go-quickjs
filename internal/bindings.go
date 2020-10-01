@@ -237,11 +237,8 @@ func AtomToValue(ctx *Context, atom Atom) Value {
 	return Value(C.JS_AtomToValue((*C.JSContext)(ctx), C.JSAtom(atom)))
 }
 
-func AtomToString(ctx *Context, atom Atom) string {
-	cstr := C.JS_AtomToCString((*C.JSContext)(ctx), C.JSAtom(atom))
-	defer C.js_free((*C.JSContext)(ctx), unsafe.Pointer(cstr))
-
-	return C.GoString(cstr)
+func AtomToString(ctx *Context, atom Atom) Value {
+	return Value(C.JS_AtomToString((*C.JSContext)(ctx), C.JSAtom(atom)))
 }
 
 func SetConstructor(ctx *Context, funcObj Value, proto Value) {
