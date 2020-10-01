@@ -3,10 +3,8 @@ package js
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/rand"
 	"runtime"
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -99,8 +97,13 @@ func (rt *Runtime) setInterval(r *Realm, thisValue *Value, fn *Function, ms floa
 	})
 }
 
-func makeTaskFunc(r *Realm, fn, thisObject *Value, args interface{}) func() error {
-	stack := debug.Stack()
+type AsyncResult struct {
+	Value *Value
+	Error error
+}
+
+func makeTaskFunc(r *Realm, fn, thisObject *Value, args interface{}) (func() error, <-chan *AsyncResult) {
+	result := make(chan *AsyncResult, 1)
 	return func() error {
 		var argValues []*Value
 		switch args := args.(type) {
@@ -111,35 +114,25 @@ func makeTaskFunc(r *Realm, fn, thisObject *Value, args interface{}) func() erro
 			var err error
 			argValues, err = r.convertArgs(args)
 			if err != nil {
-				return err
+				result <- &AsyncResult{Error: err}
+				return nil
 			}
 
 		default:
 			panic(fmt.Sprintf("unexpected args type: %T", args))
 		}
 
-		// thisValue := internal.Undefined
-		// if thisObject != nil {
-		// 	thisValue = thisObject.value
-		// }
-
-		// defer runtime.KeepAlive(fn)
-		// defer runtime.KeepAlive(thisObject)
-		// defer runtime.KeepAlive(argValues)
-
-		// internal.EnqueueJob(r.context, fn.value, thisValue, internalValues(argValues))
-
-		if _, err := fn.CallValues(thisObject, argValues); err != nil {
-			log.Println(string(stack))
-			return err
-		}
+		val, err := fn.CallValues(thisObject, argValues)
+		result <- &AsyncResult{Value: val, Error: err}
 
 		return nil
-	}
+	}, result
 }
 
-func (rt *Runtime) enqueueCall(r *Realm, fn, thisObject *Value, args interface{}) {
-	rt.enqueueTask(makeTaskFunc(r, fn, thisObject, args))
+func (rt *Runtime) enqueueCall(r *Realm, fn, thisObject *Value, args interface{}) <-chan *AsyncResult {
+	task, result := makeTaskFunc(r, fn, thisObject, args)
+	rt.enqueueTask(task)
+	return result
 }
 
 func (rt *Runtime) enqueueTask(f func() error) {
@@ -151,12 +144,17 @@ func (rt *Runtime) setTimer(r *Realm, fn *Function, ms float64, args []*Value, a
 	defer rt.mutex.Unlock()
 
 	id := rt.allocateTimerID()
-	task := makeTaskFunc(r, (*Value)(fn), nil, args)
+	task, resultChan := makeTaskFunc(r, (*Value)(fn), nil, args)
 
 	rt.timers[id] = time.AfterFunc(time.Duration(ms*float64(time.Millisecond)), func() {
 		rt.taskQueue <- func() error {
 			if err := task(); err != nil {
 				return err
+			}
+
+			result := <-resultChan
+			if result.Error != nil {
+				return result.Error
 			}
 
 			afterTask(id)

@@ -148,23 +148,7 @@ func (v *Value) String() string {
 		}
 
 		if toStringFunc := Must(v.Get("toString")); toStringFunc.IsFunction() {
-			if v.realm.runtime.isSync() {
-				return Must(toStringFunc.Call(v)).ToString()
-			} else {
-				var val *Value
-				var err error
-
-				done := make(chan struct{})
-				v.realm.runtime.enqueueTask(func() error {
-					val, err = toStringFunc.Call(v)
-					close(done)
-
-					return nil
-				})
-
-				<-done
-				return Must(val, err).ToString()
-			}
+			return Must(toStringFunc.Call(v)).ToString()
 		}
 
 		className := Must(Must(v.Get("constructor")).Get("name")).ToString()
@@ -285,26 +269,32 @@ func (v *Value) Call(thisObject *Value, args ...interface{}) (*Value, error) {
 	return v.CallValues(thisObject, convertedArgs)
 }
 
-func (v *Value) CallValuesAsync(thisObject *Value, args []*Value) error {
-	v.realm.runtime.enqueueCall(v.realm, v, thisObject, args)
-
-	return nil
+func (v *Value) CallValuesAsync(thisObject *Value, args []*Value) <-chan *AsyncResult {
+	return v.realm.runtime.enqueueCall(v.realm, v, thisObject, args)
 }
 
-func (v *Value) CallAsync(thisObject *Value, args ...interface{}) error {
-	v.realm.runtime.enqueueCall(v.realm, v, thisObject, args)
-
-	return nil
+func (v *Value) CallAsync(thisObject *Value, args ...interface{}) <-chan *AsyncResult {
+	return v.realm.runtime.enqueueCall(v.realm, v, thisObject, args)
 }
 
 func (v *Value) InvokeValues(name string, args []*Value) (*Value, error) {
 	defer runtime.KeepAlive(v)
 	defer runtime.KeepAlive(args)
 
-	return v.realm.createAndResolveValue(internal.InvokeStr(v.realm.context, v.value, name, internalValues(args)))
+	if v.realm.runtime.isSync() {
+		return v.realm.createAndResolveValue(internal.InvokeStr(v.realm.context, v.value, name, internalValues(args)))
+	}
+
+	result := <-v.InvokeValuesAsync(name, args)
+	return result.Value, result.Error
 }
 
 func (v *Value) Invoke(name string, args ...interface{}) (*Value, error) {
+	if !v.realm.runtime.isSync() {
+		result := <-v.InvokeAsync(name, args...)
+		return result.Value, result.Error
+	}
+
 	convertedArgs, err := v.realm.convertArgs(args)
 	if err != nil {
 		return nil, err
@@ -313,19 +303,23 @@ func (v *Value) Invoke(name string, args ...interface{}) (*Value, error) {
 	return v.InvokeValues(name, convertedArgs)
 }
 
-func (v *Value) InvokeValuesAsync(name string, args []*Value) error {
+func (v *Value) InvokeValuesAsync(name string, args []*Value) <-chan *AsyncResult {
 	funcValue, err := v.Get(name)
 	if err != nil {
-		return err
+		result := make(chan *AsyncResult, 1)
+		result <- &AsyncResult{Error: err}
+		return result
 	}
 
 	return funcValue.CallValuesAsync(v, args)
 }
 
-func (v *Value) InvokeAsync(name string, args ...interface{}) error {
+func (v *Value) InvokeAsync(name string, args ...interface{}) <-chan *AsyncResult {
 	funcValue, err := v.Get(name)
 	if err != nil {
-		return err
+		result := make(chan *AsyncResult, 1)
+		result <- &AsyncResult{Error: err}
+		return result
 	}
 
 	return funcValue.CallAsync(v, args...)
