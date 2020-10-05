@@ -70,6 +70,10 @@ func (r *Realm) NewBoolean(b bool) (*Value, error) {
 	return NewBoolean(b), nil
 }
 
+func (r *Realm) NewArrayBuffer(data []byte) (*Value, error) {
+	return r.createAndResolveValue(internal.NewArrayBuffer(r.context, data))
+}
+
 func (r *Realm) SetConstructor(funcObj, proto *Value) {
 	internal.SetConstructor(r.context, funcObj.value, proto.value)
 }

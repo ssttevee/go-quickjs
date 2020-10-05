@@ -292,3 +292,7 @@ func ReadObject(ctx *Context, buf []byte, flags ReadObjectFlag) Value {
 func EvalFunction(ctx *Context, funObj Value) Value {
 	return Value(C.JS_EvalFunction((*C.JSContext)(ctx), C.JSValue(DupValue(ctx, funObj))))
 }
+
+func NewArrayBuffer(ctx *Context, data []byte) Value {
+	return Value(C.JS_NewArrayBufferCopy((*C.JSContext)(ctx), (*C.uint8_t)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&data)).Data)), C.size_t(len(data))))
+}
