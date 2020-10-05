@@ -28,12 +28,7 @@ func makeLoggingFunc(logger *log.Logger, preArgs ...interface{}) interface{} {
 	}
 }
 
-func AddIntrinsicConsole(logger ...*log.Logger) RealmOption {
-	var l *log.Logger
-	if len(logger) > 0 {
-		l = logger[0]
-	}
-
+func AddIntrinsicConsoleWithLogger(l *log.Logger) RealmOption {
 	return func(r realmConfig) error {
 		consoleObj, err := r.NewObject()
 		if err != nil {
@@ -59,6 +54,10 @@ func AddIntrinsicConsole(logger ...*log.Logger) RealmOption {
 
 		return nil
 	}
+}
+
+func AddIntrinsicConsole(r realmConfig) error {
+	return AddIntrinsicConsoleWithLogger(nil)(r)
 }
 
 func AddIntrinsicTimeout(r realmConfig) error {
